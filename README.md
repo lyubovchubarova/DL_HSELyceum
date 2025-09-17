@@ -14,18 +14,20 @@
 |------|------|----| 
 | 4 сентября | Кратко про [возможности нейронных сетей, конспект от ВК](introduction_and_boosting/01_Introduction_to_NNs.pdf).   | |
 | 11 сентября | Продолжение прошлого года: [градиентный бустинг](introduction_and_boosting/boosting_by_VK.pdf). Вспоминаем прошлое: [семинар по бустингам и другим моделям](introduction_and_boosting/sem1.ipynb). | [ДЗ1](introduction_and_boosting/hw1.ipynb), дедлайн 28 сентября |
-| 18 сентября |  |  |
-| 25 сентября |  | |
-| 2 октября |  | |
-| 9 октября |  | |
-| 16 октября |  | |
-| 23 октября |  | |
-| 30 октября | 	| |
-| 6 ноября | | |
-| 13 ноября | | |
+| 18 сентября | Производная ([хороший конспект с матфака](gradient_descent/ling_derivatives.pdf), [задачки](gradient_descent/derivative_tasks.pdf)) Градиент [конспект](https://etqbwxcy.gensparkspace.com/). Градиентный спуск - [старый конспект ФКН ВШЭ, где разбирается](gradient_descent/lecture05-linreg.pdf), [более простой конспект](gradient_descent/2._Точки_минимума_функций_многих_переменных.pdf). [Семинар](https://colab.research.google.com/drive/1qkaDNQwIxXrX5dIG_aE1BuEQ1CRcC1QE?usp=sharing) | [ДЗ2: градиентный спуск], дедлайн 28 сентября |
+| 25 сентября | Базовые понятия в обучении нейросетей: распространение ошибки, слои, активации, оптимизаторы. [Конспект ШАД](NN_basics/lecture1_intro.pdf).[Семинар по оптимизациям.](https://colab.research.google.com/drive/17cGTOGhTI1CaBBwHItJOQFQSuOEn9uCy?usp=sharing)  | [ДЗ3: оптимизаторы]|
+| 2 октября | Pytorch практикум | |
+| 9 октября | Сверточные нейронные сети | |
+| 16 октября | Подход Transfer learning | |
+| 23 октября | Разные задачи компьютерного зрения | |
+| 30 октября | NLP basics	| |
+| 6 ноября | Attention & LLM | |
+| 13 ноября | Контрольная?| |
 | 20 ноября | | |
 | 27 ноября | | |
 | 4 декабря | | |
 | 11 декабря | | |
 | 18 декабря | | |
 | 25 декабря | | |
+
+
