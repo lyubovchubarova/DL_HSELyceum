@@ -12,8 +12,8 @@
 
 | Дата | Тема | ДЗ |
 |------|------|----| 
-| 4 сентября | Кратко про [возможности нейронных сетей, конспект от ВК](introduction_and_boosting/01_Introduction_to_NNs.pdf). Продолжение прошлого года: [градиентный бустинг](introduction_and_boosting/boosting_by_VK.pdf). Вспоминаем прошлое: [семинар по бустингам и другим моделям](introduction_and_boosting/sem1.ipynb).   | |
-| 11 сентября |  | |
+| 4 сентября | Кратко про [возможности нейронных сетей, конспект от ВК](introduction_and_boosting/01_Introduction_to_NNs.pdf).   | |
+| 11 сентября | Продолжение прошлого года: [градиентный бустинг](introduction_and_boosting/boosting_by_VK.pdf). Вспоминаем прошлое: [семинар по бустингам и другим моделям](introduction_and_boosting/sem1.ipynb). | [ДЗ1](introduction_and_boosting/hw1.ipynb), дедлайн 28 сентября |
 | 18 сентября |  |  |
 | 25 сентября |  | |
 | 2 октября |  | |
