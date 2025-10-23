@@ -19,7 +19,7 @@
 | 2 октября | [Backpropagation. Оптимизаторы. Инициализация. Шедулинг.](NN_basics/lecture1_intro.pdf) [Семинар](https://colab.research.google.com/drive/1kwaAt0zLBcK_p83fbJUu_rSNDjFyRbt3?usp=sharing). [Решенный семинар](NN_basics/opt_init_shedulers_solutions.ipynb) | [ДЗ3: FashionMNIST](NN_basics/homework.ipynb), дедлайн 12 октября |
 | 9 октября | [Pytorch практикум.](https://colab.research.google.com/drive/1_wL793UIMdWQNcUYcXMYIE-lI0sRaA2-?usp=sharing) [Рассказ про фреймворки от ШАДа.](pytorch/lecture2_frameworks.pdf).| [ДЗ4](https://colab.research.google.com/drive/1fYi1iykSsey7TUsqx9R9MPvA9hl0z0NA?usp=sharing), дедлайн 19 октября |
 | 16 октября | [Регуляризация.](pytorch/lecture2_frameworks.pdf) [И еще один pytorch практикум.](https://colab.research.google.com/drive/1Z9ICtjHecliXTz-TzfkWxMAaba6mg_sp?usp=sharing) | НЕТ ДЗ |
-| 23 октября | [Контрольная.](https://colab.research.google.com/drive/1KhwipTWIWQka5KKmWbzmoZ22SxejRl3y?usp=sharing) | |
+| 23 октября | [Контрольная.](https://colab.research.google.com/drive/1KhwipTWIWQka5KKmWbzmoZ22SxejRl3y?usp=sharing). [Форма для сдачи](https://forms.gle/uAWqg3hqFzcQPHMG7) | |
 | 30 октября | КАНИКУЛЫ | |
 | 6 ноября | Свертки. Обработка картинок. | |
 | 13 ноября | Transfer learning | |
