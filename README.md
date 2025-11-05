@@ -2,9 +2,10 @@
 
 
 ## Оценивание
-Ссылка на таблцу с оценками
 
-Формула оценки: 0.25*квизы + 0.25*ДЗ + 0.25*экзамен по теории + 0.25*проект
+[Ссылка на таблицу с оценками](https://docs.google.com/spreadsheets/d/1FQgwDJOaToWD7TY-Y5VjzN-hFzaItOWsOJuG4NNcqH4/edit?usp=sharing)
+
+Формула оценки: 0.25*квизы + 0.25*ДЗ + 0.25*КР + 0.25*проект
 
 Оценки выставляются по 10-балльной шкале как в ВШЭ ([подробности](https://www.hse.ru/studyspravka/Scale?ysclid=m1ngfy59pb473469014)), потом переводятся в 5-балльную 
 
@@ -21,12 +22,12 @@
 | 16 октября | [Регуляризация.](pytorch/lecture2_frameworks.pdf) [И еще один pytorch практикум.](https://colab.research.google.com/drive/1Z9ICtjHecliXTz-TzfkWxMAaba6mg_sp?usp=sharing) | НЕТ ДЗ |
 | 23 октября | [Контрольная.](https://colab.research.google.com/drive/1KhwipTWIWQka5KKmWbzmoZ22SxejRl3y?usp=sharing). [Форма для сдачи](https://forms.gle/uAWqg3hqFzcQPHMG7) | |
 | 30 октября | КАНИКУЛЫ | |
-| 6 ноября | Свертки. Обработка картинок. | |
-| 13 ноября | Transfer learning | |
-| 20 ноября |Attention & LLM | |
-| 27 ноября | Разные задачи NLP. | |
-| 4 декабря | Защита проектов | |
-| 11 декабря | | |
+| 6 ноября | Сверточные нейронные сети. Обработка картинок. [Презентация](computer_vision/lecture3_2023.pdf), [семинар](https://colab.research.google.com/drive/1XWP1BQFcOGwViswa6_YfVxYIzGiH4MiS?usp=sharing) | НЕТ ДЗ |
+| 13 ноября | Transfer learning в контексте картинок. Computer vision models' zoo. Библиотека trasformers (ура, больше не pytorch!). Для интересующихся - как дообучать в pytorch. | |
+| 20 ноября | Обработка естественного языка.   | |
+| 27 ноября | NLP models' zoo. | |
+| 4 декабря | Еще про дообучение | |
+| 11 декабря | Защита проектов. [Информация по проектам](PROJECT.md) | |
 | 18 декабря | - | |
 | 25 декабря | - | |
 

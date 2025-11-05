@@ -1,0 +1,1869 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Q_upCOEI3Upu"
+      },
+      "source": [
+        "# Основы глубинного обучения, Лицей ВШЭ\n",
+        "\n",
+        "credits to майнор ИАД\n",
+        "\n",
+        "## КР1: полносвязные сети\n",
+        "\n",
+        "**ФИО:**"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Основы глубинного обучения, Лицей ВШЭ\n",
+        "\n",
+        "credits to майнор ИАД\n",
+        "\n",
+        "## КР1: полносвязные сети\n",
+        "\n",
+        "**ФИО:**"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Eyv6AmmMmcVr"
+      },
+      "source": [
+        "\n",
+        "Максимально допустимая оценка за работу — 10 баллов.\n",
+        "Можно пользоваться семинарами, своими домашними заданиями, конспектами и гуглом."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "kLipvH4FmcVr"
+      },
+      "source": [
+        "## Оформление\n",
+        "\n",
+        "1. Обязательно фиксируйте зерно генератора случайных чисел в экспериментах. При перезапуске кода значения не должны меняться.\n",
+        "2. Вверху файла подпишите фамилию и имя\n",
+        "3. Обратите внимание, что у графиков должны быть подписаны оси, заголовок графика и при необходимости обязательно наличие легенды.\n",
+        "\n",
+        "> За отсутствие названий графиков и подписей к осям могут снижаться баллы. Все картинки должны быть самодостаточны и визуально удобны для восприятия, так чтобы не нужно было смотреть ваш код или знать задание, чтобы понять что на них изображено.\n",
+        "\n",
+        "Из каждого проведённого эксперимента делайте выводы и фиксируйте их. Эти выводы не должны быть поверхностными и очевидными. Не будьте мудрым королём.\n",
+        "\n",
+        "<br>\n",
+        "\n",
+        "<center>\n",
+        "<img src=\"https://raw.githubusercontent.com/hse-ds/iad-deep-learning/refs/heads/master/2025/homeworks/king.png\" width=\"300\">\n",
+        "</center>\n",
+        "\n",
+        "**Пример плохого вывода:** Синенькая линия идет вверх, а красная вниз. Черненькая идет вниз, а потом вверх.\n",
+        "\n",
+        "<br>\n",
+        "\n",
+        "<center>\n",
+        "<img src=\"https://raw.githubusercontent.com/hse-ds/iad-deep-learning/refs/heads/master/2025/homeworks/bad_lines.png\" width=\"600\">\n",
+        "</center>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "F0ZvWphEmcVs"
+      },
+      "source": [
+        "## О задании\n",
+        "\n",
+        "Вам предстоит обучить полносвязную нейронную сеть для предсказания года выпуска песни по ее аудио-признакам. Для этого мы будем использовать [Million Songs Dataset](https://samyzaf.com/ML/song_year/song_year.html)."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "RI_eoe063VaP",
+        "outputId": "c46eea2c-d2ca-4f37-fef3-fdee3d154d94"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "cuda\n"
+          ]
+        }
+      ],
+      "source": [
+        "import torch\n",
+        "from torch import nn\n",
+        "import torch.nn.functional as F\n",
+        "\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import random\n",
+        "\n",
+        "from tqdm.notebook import tqdm\n",
+        "from IPython.display import clear_output\n",
+        "import matplotlib.pyplot as plt\n",
+        "\n",
+        "# чтобы эффективно учить сеть, это нужно делать на gpu. Чтобы вы обучались в colab на gpu, кликните вверху Среда выполнения -> сменить среду выполнения -> Графический процессор T4\n",
+        "# после этого среда перезапустится, на выходе этой ячейки должно распечататься cuda - это значит, что вы обучаетесь на gpu\n",
+        "device = \"cuda\" if torch.cuda.is_available() else \"cpu\"\n",
+        "print(device)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "PLpwT0uomcVt"
+      },
+      "source": [
+        "Начнем с того, что скачаем и загрузим данные:"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 2,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "7NgSZeU-7vgj",
+        "outputId": "1c00cd4d-8ead-42fe-9cc4-0bc88863482a"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "--2025-10-22 15:52:28--  https://archive.ics.uci.edu/static/public/203/yearpredictionmsd.zip\n",
+            "Resolving archive.ics.uci.edu (archive.ics.uci.edu)... 128.195.10.252\n",
+            "Connecting to archive.ics.uci.edu (archive.ics.uci.edu)|128.195.10.252|:443... connected.\n",
+            "HTTP request sent, awaiting response... 200 OK\n",
+            "Length: unspecified\n",
+            "Saving to: ‘yearpredictionmsd.zip’\n",
+            "\n",
+            "yearpredictionmsd.z     [               <=>  ] 201.24M  41.9MB/s    in 5.0s    \n",
+            "\n",
+            "2025-10-22 15:52:38 (40.0 MB/s) - ‘yearpredictionmsd.zip’ saved [211011981]\n",
+            "\n"
+          ]
+        }
+      ],
+      "source": [
+        "!wget -O yearpredictionmsd.zip https://archive.ics.uci.edu/static/public/203/yearpredictionmsd.zip"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 3,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 235
+        },
+        "id": "DSVJZzkJ7zZE",
+        "outputId": "e76cc7de-302e-4105-a689-7b42f8133966",
+        "scrolled": false
+      },
+      "outputs": [
+        {
+          "data": {
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "df"
+            },
+            "text/html": [
+              "\n",
+              "  <div id=\"df-54287af7-8713-4578-8bba-97f94683d07b\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>0</th>\n",
+              "      <th>1</th>\n",
+              "      <th>2</th>\n",
+              "      <th>3</th>\n",
+              "      <th>4</th>\n",
+              "      <th>5</th>\n",
+              "      <th>6</th>\n",
+              "      <th>7</th>\n",
+              "      <th>8</th>\n",
+              "      <th>9</th>\n",
+              "      <th>...</th>\n",
+              "      <th>81</th>\n",
+              "      <th>82</th>\n",
+              "      <th>83</th>\n",
+              "      <th>84</th>\n",
+              "      <th>85</th>\n",
+              "      <th>86</th>\n",
+              "      <th>87</th>\n",
+              "      <th>88</th>\n",
+              "      <th>89</th>\n",
+              "      <th>90</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>2001</td>\n",
+              "      <td>49.94357</td>\n",
+              "      <td>21.47114</td>\n",
+              "      <td>73.07750</td>\n",
+              "      <td>8.74861</td>\n",
+              "      <td>-17.40628</td>\n",
+              "      <td>-13.09905</td>\n",
+              "      <td>-25.01202</td>\n",
+              "      <td>-12.23257</td>\n",
+              "      <td>7.83089</td>\n",
+              "      <td>...</td>\n",
+              "      <td>13.01620</td>\n",
+              "      <td>-54.40548</td>\n",
+              "      <td>58.99367</td>\n",
+              "      <td>15.37344</td>\n",
+              "      <td>1.11144</td>\n",
+              "      <td>-23.08793</td>\n",
+              "      <td>68.40795</td>\n",
+              "      <td>-1.82223</td>\n",
+              "      <td>-27.46348</td>\n",
+              "      <td>2.26327</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>2001</td>\n",
+              "      <td>48.73215</td>\n",
+              "      <td>18.42930</td>\n",
+              "      <td>70.32679</td>\n",
+              "      <td>12.94636</td>\n",
+              "      <td>-10.32437</td>\n",
+              "      <td>-24.83777</td>\n",
+              "      <td>8.76630</td>\n",
+              "      <td>-0.92019</td>\n",
+              "      <td>18.76548</td>\n",
+              "      <td>...</td>\n",
+              "      <td>5.66812</td>\n",
+              "      <td>-19.68073</td>\n",
+              "      <td>33.04964</td>\n",
+              "      <td>42.87836</td>\n",
+              "      <td>-9.90378</td>\n",
+              "      <td>-32.22788</td>\n",
+              "      <td>70.49388</td>\n",
+              "      <td>12.04941</td>\n",
+              "      <td>58.43453</td>\n",
+              "      <td>26.92061</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>2001</td>\n",
+              "      <td>50.95714</td>\n",
+              "      <td>31.85602</td>\n",
+              "      <td>55.81851</td>\n",
+              "      <td>13.41693</td>\n",
+              "      <td>-6.57898</td>\n",
+              "      <td>-18.54940</td>\n",
+              "      <td>-3.27872</td>\n",
+              "      <td>-2.35035</td>\n",
+              "      <td>16.07017</td>\n",
+              "      <td>...</td>\n",
+              "      <td>3.03800</td>\n",
+              "      <td>26.05866</td>\n",
+              "      <td>-50.92779</td>\n",
+              "      <td>10.93792</td>\n",
+              "      <td>-0.07568</td>\n",
+              "      <td>43.20130</td>\n",
+              "      <td>-115.00698</td>\n",
+              "      <td>-0.05859</td>\n",
+              "      <td>39.67068</td>\n",
+              "      <td>-0.66345</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>2001</td>\n",
+              "      <td>48.24750</td>\n",
+              "      <td>-1.89837</td>\n",
+              "      <td>36.29772</td>\n",
+              "      <td>2.58776</td>\n",
+              "      <td>0.97170</td>\n",
+              "      <td>-26.21683</td>\n",
+              "      <td>5.05097</td>\n",
+              "      <td>-10.34124</td>\n",
+              "      <td>3.55005</td>\n",
+              "      <td>...</td>\n",
+              "      <td>34.57337</td>\n",
+              "      <td>-171.70734</td>\n",
+              "      <td>-16.96705</td>\n",
+              "      <td>-46.67617</td>\n",
+              "      <td>-12.51516</td>\n",
+              "      <td>82.58061</td>\n",
+              "      <td>-72.08993</td>\n",
+              "      <td>9.90558</td>\n",
+              "      <td>199.62971</td>\n",
+              "      <td>18.85382</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>2001</td>\n",
+              "      <td>50.97020</td>\n",
+              "      <td>42.20998</td>\n",
+              "      <td>67.09964</td>\n",
+              "      <td>8.46791</td>\n",
+              "      <td>-15.85279</td>\n",
+              "      <td>-16.81409</td>\n",
+              "      <td>-12.48207</td>\n",
+              "      <td>-9.37636</td>\n",
+              "      <td>12.63699</td>\n",
+              "      <td>...</td>\n",
+              "      <td>9.92661</td>\n",
+              "      <td>-55.95724</td>\n",
+              "      <td>64.92712</td>\n",
+              "      <td>-17.72522</td>\n",
+              "      <td>-1.49237</td>\n",
+              "      <td>-7.50035</td>\n",
+              "      <td>51.76631</td>\n",
+              "      <td>7.88713</td>\n",
+              "      <td>55.66926</td>\n",
+              "      <td>28.74903</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "<p>5 rows × 91 columns</p>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-54287af7-8713-4578-8bba-97f94683d07b')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-54287af7-8713-4578-8bba-97f94683d07b button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-54287af7-8713-4578-8bba-97f94683d07b');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "    <div id=\"df-2dfdc672-66b9-43dd-b53e-a4f692022f89\">\n",
+              "      <button class=\"colab-df-quickchart\" onclick=\"quickchart('df-2dfdc672-66b9-43dd-b53e-a4f692022f89')\"\n",
+              "                title=\"Suggest charts\"\n",
+              "                style=\"display:none;\">\n",
+              "\n",
+              "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "     width=\"24px\">\n",
+              "    <g>\n",
+              "        <path d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z\"/>\n",
+              "    </g>\n",
+              "</svg>\n",
+              "      </button>\n",
+              "\n",
+              "<style>\n",
+              "  .colab-df-quickchart {\n",
+              "      --bg-color: #E8F0FE;\n",
+              "      --fill-color: #1967D2;\n",
+              "      --hover-bg-color: #E2EBFA;\n",
+              "      --hover-fill-color: #174EA6;\n",
+              "      --disabled-fill-color: #AAA;\n",
+              "      --disabled-bg-color: #DDD;\n",
+              "  }\n",
+              "\n",
+              "  [theme=dark] .colab-df-quickchart {\n",
+              "      --bg-color: #3B4455;\n",
+              "      --fill-color: #D2E3FC;\n",
+              "      --hover-bg-color: #434B5C;\n",
+              "      --hover-fill-color: #FFFFFF;\n",
+              "      --disabled-bg-color: #3B4455;\n",
+              "      --disabled-fill-color: #666;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart {\n",
+              "    background-color: var(--bg-color);\n",
+              "    border: none;\n",
+              "    border-radius: 50%;\n",
+              "    cursor: pointer;\n",
+              "    display: none;\n",
+              "    fill: var(--fill-color);\n",
+              "    height: 32px;\n",
+              "    padding: 0;\n",
+              "    width: 32px;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart:hover {\n",
+              "    background-color: var(--hover-bg-color);\n",
+              "    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "    fill: var(--button-hover-fill-color);\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart-complete:disabled,\n",
+              "  .colab-df-quickchart-complete:disabled:hover {\n",
+              "    background-color: var(--disabled-bg-color);\n",
+              "    fill: var(--disabled-fill-color);\n",
+              "    box-shadow: none;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-spinner {\n",
+              "    border: 2px solid var(--fill-color);\n",
+              "    border-color: transparent;\n",
+              "    border-bottom-color: var(--fill-color);\n",
+              "    animation:\n",
+              "      spin 1s steps(1) infinite;\n",
+              "  }\n",
+              "\n",
+              "  @keyframes spin {\n",
+              "    0% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "      border-left-color: var(--fill-color);\n",
+              "    }\n",
+              "    20% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    30% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    40% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    60% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    80% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "    90% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "  }\n",
+              "</style>\n",
+              "\n",
+              "      <script>\n",
+              "        async function quickchart(key) {\n",
+              "          const quickchartButtonEl =\n",
+              "            document.querySelector('#' + key + ' button');\n",
+              "          quickchartButtonEl.disabled = true;  // To prevent multiple clicks.\n",
+              "          quickchartButtonEl.classList.add('colab-df-spinner');\n",
+              "          try {\n",
+              "            const charts = await google.colab.kernel.invokeFunction(\n",
+              "                'suggestCharts', [key], {});\n",
+              "          } catch (error) {\n",
+              "            console.error('Error during call to suggestCharts:', error);\n",
+              "          }\n",
+              "          quickchartButtonEl.classList.remove('colab-df-spinner');\n",
+              "          quickchartButtonEl.classList.add('colab-df-quickchart-complete');\n",
+              "        }\n",
+              "        (() => {\n",
+              "          let quickchartButtonEl =\n",
+              "            document.querySelector('#df-2dfdc672-66b9-43dd-b53e-a4f692022f89 button');\n",
+              "          quickchartButtonEl.style.display =\n",
+              "            google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "        })();\n",
+              "      </script>\n",
+              "    </div>\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "text/plain": [
+              "     0         1         2         3         4         5         6         7   \\\n",
+              "0  2001  49.94357  21.47114  73.07750   8.74861 -17.40628 -13.09905 -25.01202   \n",
+              "1  2001  48.73215  18.42930  70.32679  12.94636 -10.32437 -24.83777   8.76630   \n",
+              "2  2001  50.95714  31.85602  55.81851  13.41693  -6.57898 -18.54940  -3.27872   \n",
+              "3  2001  48.24750  -1.89837  36.29772   2.58776   0.97170 -26.21683   5.05097   \n",
+              "4  2001  50.97020  42.20998  67.09964   8.46791 -15.85279 -16.81409 -12.48207   \n",
+              "\n",
+              "         8         9   ...        81         82        83        84        85  \\\n",
+              "0 -12.23257   7.83089  ...  13.01620  -54.40548  58.99367  15.37344   1.11144   \n",
+              "1  -0.92019  18.76548  ...   5.66812  -19.68073  33.04964  42.87836  -9.90378   \n",
+              "2  -2.35035  16.07017  ...   3.03800   26.05866 -50.92779  10.93792  -0.07568   \n",
+              "3 -10.34124   3.55005  ...  34.57337 -171.70734 -16.96705 -46.67617 -12.51516   \n",
+              "4  -9.37636  12.63699  ...   9.92661  -55.95724  64.92712 -17.72522  -1.49237   \n",
+              "\n",
+              "         86         87        88         89        90  \n",
+              "0 -23.08793   68.40795  -1.82223  -27.46348   2.26327  \n",
+              "1 -32.22788   70.49388  12.04941   58.43453  26.92061  \n",
+              "2  43.20130 -115.00698  -0.05859   39.67068  -0.66345  \n",
+              "3  82.58061  -72.08993   9.90558  199.62971  18.85382  \n",
+              "4  -7.50035   51.76631   7.88713   55.66926  28.74903  \n",
+              "\n",
+              "[5 rows x 91 columns]"
+            ]
+          },
+          "execution_count": 3,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "df = pd.read_csv('yearpredictionmsd.zip', header=None)\n",
+        "df.head()"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "mAG3XeNqmcVu"
+      },
+      "source": [
+        "Посмотрим на статистики по данным."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 4,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 349
+        },
+        "id": "_oRCr_jsmcVu",
+        "outputId": "27782017-9c83-4d61-e0b5-0131a9452b16"
+      },
+      "outputs": [
+        {
+          "data": {
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe"
+            },
+            "text/html": [
+              "\n",
+              "  <div id=\"df-d9f8c833-f2f6-48d0-a005-d9e6720df300\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>0</th>\n",
+              "      <th>1</th>\n",
+              "      <th>2</th>\n",
+              "      <th>3</th>\n",
+              "      <th>4</th>\n",
+              "      <th>5</th>\n",
+              "      <th>6</th>\n",
+              "      <th>7</th>\n",
+              "      <th>8</th>\n",
+              "      <th>9</th>\n",
+              "      <th>...</th>\n",
+              "      <th>81</th>\n",
+              "      <th>82</th>\n",
+              "      <th>83</th>\n",
+              "      <th>84</th>\n",
+              "      <th>85</th>\n",
+              "      <th>86</th>\n",
+              "      <th>87</th>\n",
+              "      <th>88</th>\n",
+              "      <th>89</th>\n",
+              "      <th>90</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>count</th>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>...</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "      <td>515345.000000</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>mean</th>\n",
+              "      <td>1998.397082</td>\n",
+              "      <td>43.387126</td>\n",
+              "      <td>1.289554</td>\n",
+              "      <td>8.658347</td>\n",
+              "      <td>1.164124</td>\n",
+              "      <td>-6.553601</td>\n",
+              "      <td>-9.521975</td>\n",
+              "      <td>-2.391089</td>\n",
+              "      <td>-1.793236</td>\n",
+              "      <td>3.727876</td>\n",
+              "      <td>...</td>\n",
+              "      <td>15.755406</td>\n",
+              "      <td>-73.461500</td>\n",
+              "      <td>41.542422</td>\n",
+              "      <td>37.934119</td>\n",
+              "      <td>0.315751</td>\n",
+              "      <td>17.669213</td>\n",
+              "      <td>-26.315336</td>\n",
+              "      <td>4.458641</td>\n",
+              "      <td>20.035136</td>\n",
+              "      <td>1.329105</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>std</th>\n",
+              "      <td>10.931046</td>\n",
+              "      <td>6.067558</td>\n",
+              "      <td>51.580351</td>\n",
+              "      <td>35.268585</td>\n",
+              "      <td>16.322790</td>\n",
+              "      <td>22.860785</td>\n",
+              "      <td>12.857751</td>\n",
+              "      <td>14.571873</td>\n",
+              "      <td>7.963827</td>\n",
+              "      <td>10.582861</td>\n",
+              "      <td>...</td>\n",
+              "      <td>32.099635</td>\n",
+              "      <td>175.618889</td>\n",
+              "      <td>122.228799</td>\n",
+              "      <td>95.050631</td>\n",
+              "      <td>16.161764</td>\n",
+              "      <td>114.427905</td>\n",
+              "      <td>173.977336</td>\n",
+              "      <td>13.346557</td>\n",
+              "      <td>185.558247</td>\n",
+              "      <td>22.088576</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>min</th>\n",
+              "      <td>1922.000000</td>\n",
+              "      <td>1.749000</td>\n",
+              "      <td>-337.092500</td>\n",
+              "      <td>-301.005060</td>\n",
+              "      <td>-154.183580</td>\n",
+              "      <td>-181.953370</td>\n",
+              "      <td>-81.794290</td>\n",
+              "      <td>-188.214000</td>\n",
+              "      <td>-72.503850</td>\n",
+              "      <td>-126.479040</td>\n",
+              "      <td>...</td>\n",
+              "      <td>-437.722030</td>\n",
+              "      <td>-4402.376440</td>\n",
+              "      <td>-1810.689190</td>\n",
+              "      <td>-3098.350310</td>\n",
+              "      <td>-341.789120</td>\n",
+              "      <td>-3168.924570</td>\n",
+              "      <td>-4319.992320</td>\n",
+              "      <td>-236.039260</td>\n",
+              "      <td>-7458.378150</td>\n",
+              "      <td>-381.424430</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>25%</th>\n",
+              "      <td>1994.000000</td>\n",
+              "      <td>39.954690</td>\n",
+              "      <td>-26.059520</td>\n",
+              "      <td>-11.462710</td>\n",
+              "      <td>-8.487500</td>\n",
+              "      <td>-20.666450</td>\n",
+              "      <td>-18.440990</td>\n",
+              "      <td>-10.780600</td>\n",
+              "      <td>-6.468420</td>\n",
+              "      <td>-2.293660</td>\n",
+              "      <td>...</td>\n",
+              "      <td>-1.812650</td>\n",
+              "      <td>-139.555160</td>\n",
+              "      <td>-20.986900</td>\n",
+              "      <td>-4.669540</td>\n",
+              "      <td>-6.781590</td>\n",
+              "      <td>-31.580610</td>\n",
+              "      <td>-101.530300</td>\n",
+              "      <td>-2.566090</td>\n",
+              "      <td>-59.509270</td>\n",
+              "      <td>-8.820210</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>50%</th>\n",
+              "      <td>2002.000000</td>\n",
+              "      <td>44.258500</td>\n",
+              "      <td>8.417850</td>\n",
+              "      <td>10.476320</td>\n",
+              "      <td>-0.652840</td>\n",
+              "      <td>-6.007770</td>\n",
+              "      <td>-11.188390</td>\n",
+              "      <td>-2.046670</td>\n",
+              "      <td>-1.736450</td>\n",
+              "      <td>3.822310</td>\n",
+              "      <td>...</td>\n",
+              "      <td>9.171850</td>\n",
+              "      <td>-53.090060</td>\n",
+              "      <td>28.791060</td>\n",
+              "      <td>33.623630</td>\n",
+              "      <td>0.820840</td>\n",
+              "      <td>15.598470</td>\n",
+              "      <td>-21.204120</td>\n",
+              "      <td>3.117640</td>\n",
+              "      <td>7.759730</td>\n",
+              "      <td>0.053050</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>75%</th>\n",
+              "      <td>2006.000000</td>\n",
+              "      <td>47.833890</td>\n",
+              "      <td>36.124010</td>\n",
+              "      <td>29.764820</td>\n",
+              "      <td>8.787540</td>\n",
+              "      <td>7.741870</td>\n",
+              "      <td>-2.388960</td>\n",
+              "      <td>6.508580</td>\n",
+              "      <td>2.913450</td>\n",
+              "      <td>9.961820</td>\n",
+              "      <td>...</td>\n",
+              "      <td>26.274480</td>\n",
+              "      <td>13.478730</td>\n",
+              "      <td>89.661770</td>\n",
+              "      <td>77.785800</td>\n",
+              "      <td>8.470990</td>\n",
+              "      <td>67.794960</td>\n",
+              "      <td>52.389330</td>\n",
+              "      <td>9.967740</td>\n",
+              "      <td>86.351610</td>\n",
+              "      <td>9.679520</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>max</th>\n",
+              "      <td>2011.000000</td>\n",
+              "      <td>61.970140</td>\n",
+              "      <td>384.065730</td>\n",
+              "      <td>322.851430</td>\n",
+              "      <td>335.771820</td>\n",
+              "      <td>262.068870</td>\n",
+              "      <td>166.236890</td>\n",
+              "      <td>172.402680</td>\n",
+              "      <td>126.741270</td>\n",
+              "      <td>146.297950</td>\n",
+              "      <td>...</td>\n",
+              "      <td>840.973380</td>\n",
+              "      <td>4469.454870</td>\n",
+              "      <td>3210.701700</td>\n",
+              "      <td>1734.079690</td>\n",
+              "      <td>260.544900</td>\n",
+              "      <td>3662.065650</td>\n",
+              "      <td>2833.608950</td>\n",
+              "      <td>463.419500</td>\n",
+              "      <td>7393.398440</td>\n",
+              "      <td>677.899630</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "<p>8 rows × 91 columns</p>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-d9f8c833-f2f6-48d0-a005-d9e6720df300')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-d9f8c833-f2f6-48d0-a005-d9e6720df300 button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-d9f8c833-f2f6-48d0-a005-d9e6720df300');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "    <div id=\"df-d76d42ee-fe43-4f88-9127-92bc412f6b11\">\n",
+              "      <button class=\"colab-df-quickchart\" onclick=\"quickchart('df-d76d42ee-fe43-4f88-9127-92bc412f6b11')\"\n",
+              "                title=\"Suggest charts\"\n",
+              "                style=\"display:none;\">\n",
+              "\n",
+              "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "     width=\"24px\">\n",
+              "    <g>\n",
+              "        <path d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z\"/>\n",
+              "    </g>\n",
+              "</svg>\n",
+              "      </button>\n",
+              "\n",
+              "<style>\n",
+              "  .colab-df-quickchart {\n",
+              "      --bg-color: #E8F0FE;\n",
+              "      --fill-color: #1967D2;\n",
+              "      --hover-bg-color: #E2EBFA;\n",
+              "      --hover-fill-color: #174EA6;\n",
+              "      --disabled-fill-color: #AAA;\n",
+              "      --disabled-bg-color: #DDD;\n",
+              "  }\n",
+              "\n",
+              "  [theme=dark] .colab-df-quickchart {\n",
+              "      --bg-color: #3B4455;\n",
+              "      --fill-color: #D2E3FC;\n",
+              "      --hover-bg-color: #434B5C;\n",
+              "      --hover-fill-color: #FFFFFF;\n",
+              "      --disabled-bg-color: #3B4455;\n",
+              "      --disabled-fill-color: #666;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart {\n",
+              "    background-color: var(--bg-color);\n",
+              "    border: none;\n",
+              "    border-radius: 50%;\n",
+              "    cursor: pointer;\n",
+              "    display: none;\n",
+              "    fill: var(--fill-color);\n",
+              "    height: 32px;\n",
+              "    padding: 0;\n",
+              "    width: 32px;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart:hover {\n",
+              "    background-color: var(--hover-bg-color);\n",
+              "    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "    fill: var(--button-hover-fill-color);\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart-complete:disabled,\n",
+              "  .colab-df-quickchart-complete:disabled:hover {\n",
+              "    background-color: var(--disabled-bg-color);\n",
+              "    fill: var(--disabled-fill-color);\n",
+              "    box-shadow: none;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-spinner {\n",
+              "    border: 2px solid var(--fill-color);\n",
+              "    border-color: transparent;\n",
+              "    border-bottom-color: var(--fill-color);\n",
+              "    animation:\n",
+              "      spin 1s steps(1) infinite;\n",
+              "  }\n",
+              "\n",
+              "  @keyframes spin {\n",
+              "    0% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "      border-left-color: var(--fill-color);\n",
+              "    }\n",
+              "    20% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    30% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    40% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    60% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    80% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "    90% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "  }\n",
+              "</style>\n",
+              "\n",
+              "      <script>\n",
+              "        async function quickchart(key) {\n",
+              "          const quickchartButtonEl =\n",
+              "            document.querySelector('#' + key + ' button');\n",
+              "          quickchartButtonEl.disabled = true;  // To prevent multiple clicks.\n",
+              "          quickchartButtonEl.classList.add('colab-df-spinner');\n",
+              "          try {\n",
+              "            const charts = await google.colab.kernel.invokeFunction(\n",
+              "                'suggestCharts', [key], {});\n",
+              "          } catch (error) {\n",
+              "            console.error('Error during call to suggestCharts:', error);\n",
+              "          }\n",
+              "          quickchartButtonEl.classList.remove('colab-df-spinner');\n",
+              "          quickchartButtonEl.classList.add('colab-df-quickchart-complete');\n",
+              "        }\n",
+              "        (() => {\n",
+              "          let quickchartButtonEl =\n",
+              "            document.querySelector('#df-d76d42ee-fe43-4f88-9127-92bc412f6b11 button');\n",
+              "          quickchartButtonEl.style.display =\n",
+              "            google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "        })();\n",
+              "      </script>\n",
+              "    </div>\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "text/plain": [
+              "                  0              1              2              3   \\\n",
+              "count  515345.000000  515345.000000  515345.000000  515345.000000   \n",
+              "mean     1998.397082      43.387126       1.289554       8.658347   \n",
+              "std        10.931046       6.067558      51.580351      35.268585   \n",
+              "min      1922.000000       1.749000    -337.092500    -301.005060   \n",
+              "25%      1994.000000      39.954690     -26.059520     -11.462710   \n",
+              "50%      2002.000000      44.258500       8.417850      10.476320   \n",
+              "75%      2006.000000      47.833890      36.124010      29.764820   \n",
+              "max      2011.000000      61.970140     384.065730     322.851430   \n",
+              "\n",
+              "                  4              5              6              7   \\\n",
+              "count  515345.000000  515345.000000  515345.000000  515345.000000   \n",
+              "mean        1.164124      -6.553601      -9.521975      -2.391089   \n",
+              "std        16.322790      22.860785      12.857751      14.571873   \n",
+              "min      -154.183580    -181.953370     -81.794290    -188.214000   \n",
+              "25%        -8.487500     -20.666450     -18.440990     -10.780600   \n",
+              "50%        -0.652840      -6.007770     -11.188390      -2.046670   \n",
+              "75%         8.787540       7.741870      -2.388960       6.508580   \n",
+              "max       335.771820     262.068870     166.236890     172.402680   \n",
+              "\n",
+              "                  8              9   ...             81             82  \\\n",
+              "count  515345.000000  515345.000000  ...  515345.000000  515345.000000   \n",
+              "mean       -1.793236       3.727876  ...      15.755406     -73.461500   \n",
+              "std         7.963827      10.582861  ...      32.099635     175.618889   \n",
+              "min       -72.503850    -126.479040  ...    -437.722030   -4402.376440   \n",
+              "25%        -6.468420      -2.293660  ...      -1.812650    -139.555160   \n",
+              "50%        -1.736450       3.822310  ...       9.171850     -53.090060   \n",
+              "75%         2.913450       9.961820  ...      26.274480      13.478730   \n",
+              "max       126.741270     146.297950  ...     840.973380    4469.454870   \n",
+              "\n",
+              "                  83             84             85             86  \\\n",
+              "count  515345.000000  515345.000000  515345.000000  515345.000000   \n",
+              "mean       41.542422      37.934119       0.315751      17.669213   \n",
+              "std       122.228799      95.050631      16.161764     114.427905   \n",
+              "min     -1810.689190   -3098.350310    -341.789120   -3168.924570   \n",
+              "25%       -20.986900      -4.669540      -6.781590     -31.580610   \n",
+              "50%        28.791060      33.623630       0.820840      15.598470   \n",
+              "75%        89.661770      77.785800       8.470990      67.794960   \n",
+              "max      3210.701700    1734.079690     260.544900    3662.065650   \n",
+              "\n",
+              "                  87             88             89             90  \n",
+              "count  515345.000000  515345.000000  515345.000000  515345.000000  \n",
+              "mean      -26.315336       4.458641      20.035136       1.329105  \n",
+              "std       173.977336      13.346557     185.558247      22.088576  \n",
+              "min     -4319.992320    -236.039260   -7458.378150    -381.424430  \n",
+              "25%      -101.530300      -2.566090     -59.509270      -8.820210  \n",
+              "50%       -21.204120       3.117640       7.759730       0.053050  \n",
+              "75%        52.389330       9.967740      86.351610       9.679520  \n",
+              "max      2833.608950     463.419500    7393.398440     677.899630  \n",
+              "\n",
+              "[8 rows x 91 columns]"
+            ]
+          },
+          "execution_count": 4,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "df.describe()"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Q38KacX6mcVu"
+      },
+      "source": [
+        "Целевая переменная, год выпуска песни, записана в первом столбце. Посмотрим на ее распределение."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 484
+        },
+        "id": "pLWDolN-mcVu",
+        "outputId": "058a6454-70aa-4833-b79f-b948a7a2ca98"
+      },
+      "outputs": [],
+      "source": [
+        "plt.hist(df.iloc[:, 0], bins=20)\n",
+        "plt.xlabel('year')\n",
+        "plt.ylabel('count')\n",
+        "plt.show()\n",
+        "print(f'Range: {df.iloc[:, 0].min()} - {df.iloc[:, 0].max()}')\n",
+        "print(f'Unique values: {np.unique(df.iloc[:, 0]).size}')"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "N9a-eJUG35C3"
+      },
+      "source": [
+        "Разобьем данные на обучение и тест (не меняйте здесь ничего, чтобы сплит был одинаковым у всех)."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 6,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "frAMKGzRmcVu",
+        "outputId": "3af0a168-2751-4d93-f1bc-f5760cd58b75"
+      },
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "((386508, 90), (128837, 90))"
+            ]
+          },
+          "execution_count": 6,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "X = df.iloc[:, 1:].values\n",
+        "y = df.iloc[:, 0].values\n",
+        "\n",
+        "train_size = int(0.75 * X.shape[0])\n",
+        "\n",
+        "X_train = X[:train_size, :]\n",
+        "y_train = y[:train_size]\n",
+        "X_test = X[train_size:, :]\n",
+        "y_test = y[train_size:]\n",
+        "\n",
+        "X_train.shape, X_test.shape"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "KjkHqIDWmcVu"
+      },
+      "source": [
+        "## Полезные советы:\n",
+        "\n",
+        "- Если вы сразу реализуете обучение на GPU, то у вас будет больше времени на эксперименты, так как любые вычисления будут работать быстрее. Google Colab предоставляет несколько GPU-часов (обычно около 8-10) в сутки бесплатно.\n",
+        "\n",
+        "- Если вы чего-то не знаете, не стесняйтесь гуглить. В интернете очень много полезной информации, туториалов и советов по глубинному обучению и `pytorch`. Но не забывайте, что за списанный код без ссылки на источник последует наказание.\n",
+        "\n",
+        "- Чтобы отладить код, можете обучаться на небольшой части данных или даже на одном батче. Если лосс на обучающей выборке не падает, то что-то точно идет не так.\n",
+        "\n",
+        "- Пользуйтесь утилитами, которые вам предоставляет `pytorch` (например, `Dataset` и `Dataloader`). Их специально разработали для упрощения разработки пайплайна обучения.\n",
+        "\n",
+        "- Скорее всего, вы захотите отслеживать прогресс обучения. Для создания прогресс-баров есть удобная библиотека `tqdm`.\n",
+        "\n",
+        "- Быть может, вы захотите, чтобы графики рисовались прямо во время обучения. Можете воспользоваться функцией [clear_output](http://ipython.org/ipython-doc/dev/api/generated/IPython.display.html#IPython.display.clear_output), чтобы удалять старый график и рисовать новый на его месте.\n",
+        "\n",
+        "- Финальное значение тестовой метрики для удобства проверки выведите в тетрадке."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "_386JE_o5gOd"
+      },
+      "source": [
+        "## Задание 0 (0 баллов, но при невыполнении максимальная оценка за всю работу &mdash; 0 баллов)\n",
+        "\n",
+        "Мы будем использовать RMSE как метрику качества. Прежде чем обучать нейронные сети, нам нужно проверить несколько простых бейзлайнов, чтобы было с чем сравнить более сложные алгоритмы. Для этого бучите `Ridge` регрессию из `sklearn`. Кроме того, посчитайте качество при наилучшем константном прогнозе.\n",
+        "\n",
+        "Для выполнения данного задания (и всех последующих) предобработайте данные.\n",
+        "\n",
+        "1. Зафиксируйте random_seed везде где только возможно. Вам предоставлена функция для этого, однако вы можете дополнить ее своими дополнениями.\n",
+        "2. Обучите `StandertScaler` и предобработайте ваши данные. В следующих заданиях можете использовать другой `scaler` или вообще отказаться от него.\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 7,
+      "metadata": {
+        "id": "lkfkXylb8U-O"
+      },
+      "outputs": [],
+      "source": [
+        "def set_global_seed(seed: int) -> None:\n",
+        "    \"\"\"Set global seed for reproducibility.\n",
+        "    :param int seed: Seed to be set\n",
+        "    \"\"\"\n",
+        "    torch.backends.cudnn.deterministic = True\n",
+        "    torch.manual_seed(seed)\n",
+        "    torch.cuda.manual_seed(seed)\n",
+        "    torch.cuda.manual_seed_all(seed)\n",
+        "    np.random.seed(seed)\n",
+        "    random.seed(seed)\n",
+        "\n",
+        "    # также можно зафиксировать seed для Dataloader\n",
+        "    g = torch.Generator()\n",
+        "    g.manual_seed(seed)\n",
+        "    return g\n",
+        "\n",
+        "# Сид для каждого worker в Dataloader\n",
+        "def seed_worker(worker_id):\n",
+        "    worker_seed = torch.initial_seed() % 2**32\n",
+        "    np.random.seed(worker_seed)\n",
+        "    random.seed(worker_seed)\n",
+        "\n",
+        "g = set_global_seed(42)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "GKVVatBw8cH7"
+      },
+      "outputs": [],
+      "source": [
+        "from sklearn.preprocessing import StandardScaler\n",
+        "scaler = StandardScaler()\n",
+        "\n",
+        "model = ...\n",
+        "rmse_for_model = ...\n",
+        "\n",
+        "# your code here  ⟅⎰᨟﹏᨟⎱⟆"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "HJKGuhFi35C4"
+      },
+      "source": [
+        "Лучшая константа для RMSE это среднее. Используйте среднее, расчитанное на трэйне в качестве прогноза для теста и посчитайте для такой наивной модели RMSE."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "kOcFuy1P35C4"
+      },
+      "outputs": [],
+      "source": [
+        " # your code here  ⟅⎛ꌩωꌩ⎞⟆\n",
+        "best_rmse_metric = ..."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "fRRIpAVumcVv"
+      },
+      "source": [
+        "Теперь приступим к экспериментам с нейросетями. Для начала отделим от данных валидацию. Тестовую выборку мы будем использовать только для того, чтобы измерить итоговую метрику качества модели."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "8iJnXGaumcVv"
+      },
+      "outputs": [],
+      "source": [
+        "from sklearn.model_selection import train_test_split\n",
+        "\n",
+        "X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=0xE2E4)\n",
+        "X_train.shape, X_val.shape"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "VJ4GS2x_mcVv"
+      },
+      "source": [
+        "## Часть I. Обучаем линейную регрессию (максимум 10 баллов)\n",
+        "\n",
+        "**Задание 1 (10 баллов):** Обучите в `pytorch` линейную регрессию.\n",
+        "\n",
+        "- Создайте модель линейной регрессии, которая будет состоять только из одного `Linear()` слоя.\n",
+        "   \n",
+        "- Напишите цикл обучения вашей линейной регрессии. В нем реализуйте подсчет функции потерь, сделайте шаг градиентного спуска. Запрещено использовать готовые оптимизаторы и loss-функции из библиотеки `pytorch`. Для подсчета градиента воспользуйтесь методом backward.\n",
+        "   \n",
+        "- Запустите обучение на 10 эпохах, после каждой проверяйте значение целевой метрики на тестовой выборке.\n",
+        "   \n",
+        "- Выведите на экран графики метрики и значения функции потерь на тестовой и обучающей выборке.\n",
+        "\n",
+        "В данном задании нет цели побить какой-то порог по метрике. Ваша задача &mdash; убедиться в том, что ваш рукописный цикл обучения работает. Для ускорения вычислений и обучения модели можете брать только срез данных, а не весь датасет."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "QlQdjFkdmcVv"
+      },
+      "outputs": [],
+      "source": [
+        "# your code here (ง •̀_•́)ง"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "UBZ65ttBmcVv"
+      },
+      "source": [
+        "## Часть II. Заводим нейронную сеть (максимум 10 баллов)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Rjfh8zE4mcVv"
+      },
+      "source": [
+        "Ниже нам предстоит реализовать довольно много различных нейросетей и поставить целую серию экспериментов. Чтобы это всё происходило без боли и страданий, нам нужно держать код в удобном виде.\n",
+        "\n",
+        "При решении заданий вы можете придерживаться любой адекватной струкуры кода, но мы советуем воспользоваться сигнатурами функций, которые приведены ниже. При необходимости вы можете добавить в них любые нужные вам аргументы и любой нужный функционал. Более того, хорошей практикой является не делать эти функции слишком громоздкими и выносить разные хитрые штуки в отдельные функции."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "QzlEIn51mcVw"
+      },
+      "outputs": [],
+      "source": [
+        "def training_epoch(model, optimizer, criterion, train_loader):\n",
+        "    \"\"\"Одна эпоха обучения\n",
+        "    params:\n",
+        "        model - torch.nn.Module to be fitted\n",
+        "        optimizer - model optimizer\n",
+        "        criterion - loss function from torch.nn\n",
+        "        train_loader - torch.utils.data.Dataloader with train set\n",
+        "    \"\"\"\n",
+        "\n",
+        "    # your code here  ♪┏(・o･)┛♪\n",
+        "\n",
+        "    raise NotImplementedError\n",
+        "\n",
+        "\n",
+        "@torch.no_grad()\n",
+        "def validation_epoch(model, criterion, val_loader):\n",
+        "    \"\"\"Одна эпоха валидации модели\n",
+        "    params:\n",
+        "        model - torch.nn.Module to be fitted\n",
+        "        criterion - loss function from torch.nn\n",
+        "        val_loader - torch.utils.data.Dataloader with test set\n",
+        "                      (if you wish to validate during training)\n",
+        "    \"\"\"\n",
+        "\n",
+        "    # your code here   ฅ^•ﻌ•^ฅ\n",
+        "\n",
+        "    raise NotImplementedError\n",
+        "\n",
+        "\n",
+        "@torch.no_grad()\n",
+        "def predict(model, data_loader):\n",
+        "    \"\"\" Предсказания модели\n",
+        "    params:\n",
+        "        model - torch.nn.Module to be evaluated on test set\n",
+        "        criterion - loss function from torch.nn\n",
+        "        data_loader - torch.utils.data.Dataloader with test set\n",
+        "    ----------\n",
+        "    returns:\n",
+        "        predicts - torch.tensor with shape (len(test_loader.dataset), ),\n",
+        "                   which contains predictions for test objects\n",
+        "    \"\"\"\n",
+        "\n",
+        "    # your code here  =^･ω･^=\n",
+        "\n",
+        "    predicts = torch.ones(len(test_loader.dataset))\n",
+        "    return predicts\n",
+        "\n",
+        "\n",
+        "def train(model, optimizer, criterion, train_loader, val_loader, epochs):\n",
+        "    \"\"\" Обучение модели\n",
+        "    params:\n",
+        "        model - torch.nn.Module to be fitted\n",
+        "        optimizer - model optimizer\n",
+        "        criterion - loss function from torch.nn\n",
+        "        train_loader - torch.utils.data.Dataloader with train set\n",
+        "        val_loader - torch.utils.data.Dataloader with test set\n",
+        "                      (if you wish to validate during training)\n",
+        "        epochs - number of training epochs\n",
+        "    \"\"\"\n",
+        "\n",
+        "    # your code here  ¯\\_(ツ)_/¯\n",
+        "\n",
+        "    raise NotImplementedError"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "maI79laYmcVw"
+      },
+      "source": [
+        "**Задание 2 (2 балла)**"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "NqzVHs-6mcVw"
+      },
+      "source": [
+        "Попробуем обучить нашу первую нейронную сеть. Здесь целевая переменная дискретная &mdash; это год выпуска песни. Поэтому будем учить сеть на классификацию.\n",
+        "\n",
+        "- В качестве архитектуры сети возьмите два линейных слоя с активацией ReLU между ними c числом скрытых нейронов, равным 128.\n",
+        "- Используйте SGD с `lr=1e-3`.\n",
+        "- Возьмите размер мини-батча около 32-64, примерно 3-4 эпох обучения должно быть достаточно.\n",
+        "- Также преобразуйте целевую переменную так, чтобы ее значения принимали значения от $0$ до $C-1$, где $C$ &mdash; число классов (лучше передайте преобразованное значение в DataLoader, исходное нам еще пригодится)\n",
+        "- В качестве метрики качества мы используем RMSE. При его подсчёте вам нужно заменить предсказанный нейросеткой класс на конкретный год выпуска песни и использовать его как прогноз."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "IFEZ1KzQmcVw"
+      },
+      "outputs": [],
+      "source": [
+        "# your code here (￣ω￣)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "4NADW7EumcVw"
+      },
+      "source": [
+        "**Задание 3 (1 балл).** Прокомментируйте ваши наблюдения. Удалось ли побить бейзлайн? Как вы думаете, хорошая ли идея учить классификатор для этой задачи? Почему?\n",
+        "\n",
+        "**Ответ:** ...\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "hUNTlH68mcVw"
+      },
+      "source": [
+        "**Задание 4 (2 балла).** Теперь попробуем решать задачу как регрессию. Обучите нейронную сеть на MSE.\n",
+        "\n",
+        "- Используйте такие же гиперпараметры обучения.\n",
+        "- Когда передаете целевую переменную в DataLoader, сделайте reshape в (-1, 1).\n",
+        "- Если что-то пойдет не так, можете попробовать меньшие значения `lr`."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "HTQTNcIcmcVw"
+      },
+      "outputs": [],
+      "source": [
+        "# your code here ( ⚆ _ ⚆)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "IbL6C0nDmcVw"
+      },
+      "source": [
+        "**Задание 5 (1 балл).** Получилось ли у вас стабилизировать обучение? Помогли ли меньшие значения `lr`? Стало ли лучше от замены классификации на регрессию? Как вы думаете, почему так происходит? В качестве подсказки можете посмотреть на распределение целевой переменной и магнитуду значений признаков.\n",
+        "\n",
+        "**Ответ:** ..."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "pJdLrxpVmcVw"
+      },
+      "source": [
+        "**Задание 6 (1 балл).** Начнем с того, что попробуем отнормировать целевую переменную. Для этого воспользуемся min-max нормализацией, чтобы целевая переменная принимала значения от 0 до 1. Реализуйте функции `normalize` и `denormalize`, которые, соответственно, нормируют целевую переменную и применяют обратное преобразование. Минимум и максимум оцените по обучающей выборке (то есть эти константы должны быть фиксированными и не зависеть от передаваемой выборки)."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "5h6FwCWwmcVw"
+      },
+      "outputs": [],
+      "source": [
+        "def normalize(sample):\n",
+        "    \"\"\"\n",
+        "    Min-max normalization to convert sample to [0, 1] range\n",
+        "    \"\"\"\n",
+        "    # your code here ᕦ(ò_óˇ)ᕤ\n",
+        "    pass\n",
+        "\n",
+        "def denormalize(sample):\n",
+        "    \"\"\"\n",
+        "    Denormalize sample from [0, 1] to initial range\n",
+        "    \"\"\"\n",
+        "    # your code here ( ⚆ ω ⚆)\n",
+        "    pass"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "goWZaATPmcVw"
+      },
+      "source": [
+        "**Задание 7 (1 балл)** Теперь повторите эксперимент из **задания 4**, обучаясь на нормированной целевой переменной. Сделаем также еще одно изменение: добавим сигмоидную активацию после последнего линейного слоя сети. Таким образом мы гарантируем, что нейронная сеть предсказывает числа из промежутка $[0, 1]$. Использование активации - довольно распространенный прием, когда мы хотим получить числа из определенного диапазона значений."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "Hi6dIzGSmcVw"
+      },
+      "outputs": [],
+      "source": [
+        "# your code here  ლ(ಠ益ಠლ)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Y0K1q--WmcV2"
+      },
+      "source": [
+        "**Задание 8 (2 балла).** На этот раз попробуем отнормировать не только целевую переменную, но и сами данные, которые подаются сети на вход. Для них будем использовать нормализацию через среднее и стандартное отклонение. Преобразуйте данные и повторите прошлый эксперимент. Скорее всего, имеет смысл увеличить число эпох обучения."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "R0CqA-6fmcV3"
+      },
+      "outputs": [],
+      "source": [
+        "from sklearn.preprocessing import StandardScaler\n",
+        "\n",
+        " # your code here  ( ͡° ͜ʖ ͡°)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "wa_vCQAGmcV3"
+      },
+      "source": [
+        "Если вы все сделали правильно, то у вас должно было получиться качество, сравнимое с `Ridge` регрессией.\n",
+        "\n",
+        "**Мораль:** как видите, нам пришлось сделать очень много хитрых телодвижений, чтобы нейронная сеть работала хотя бы так же, как и простая линейная модель. Здесь, конечно, показан совсем экстремальный случай, когда без нормализации данных нейронная сеть просто не учится. Как правило, в реальности завести нейронную сеть из коробки не очень сложно, но вот заставить ее работать на полную &mdash; куда более трудоемкая задача. Написание пайплайнов обучения нейросетевых моделей требует большой аккуратности, а дебаг часто превращается в угадайку. К счастью, очень часто на помощь приходит интуиция, и мы надеемся, что вы сможете выработать ее в течение нашего курса. Начнем с двух советов, которые стоит принять на вооружение:\n",
+        "\n",
+        "- Обязательно начинаем любые эксперименты с бейзлайнов: без них мы бы не поняли, что нейронная сеть не учится в принципе.\n",
+        "- При постановке эксперментов старайтесь делать минимальное количество изменений за раз (в идеале одно!): только так можно понять, какие конкретно изменения влияют на результат."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "hTJT2SxgmcV3"
+      },
+      "source": [
+        "## Часть III. Улучшаем нейронную сеть (максимум 10 баллов)\n",
+        "\n",
+        "Продолжим экспериментировать с нейронной сетью, чтобы добиться еще лучшего качества."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "G0crs_LomcV3"
+      },
+      "source": [
+        "**Задание 9 (1 балл).** Давайте попробуем другие оптимизаторы. Обучите нейросеть с помощью SGD+momentum и Adam. Опишите свои наблюдения и в дальнейших запусках используйте лучший оптимизатор. Для Adam обычно берут learning rate поменьше, в районе $10^{-3}$."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "jr0sviSUmcV3"
+      },
+      "outputs": [],
+      "source": [
+        "# your code here  ( ཀ ʖ̯ ཀ)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "kp8lellNmcV3"
+      },
+      "source": [
+        "**Задание 10 (1 балл).** Теперь сделаем нашу нейронную сеть более сложной. Попробуйте сделать сеть:\n",
+        "\n",
+        "- более широкой (то есть увеличить размерность скрытого слоя, например, вдвое)\n",
+        "- более глубокой (то есть добавить еще один скрытый слой)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "8jqc1iDlmcV3"
+      },
+      "outputs": [],
+      "source": [
+        "# your code here  (๑-﹏-๑)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "3xHpEGZNmcV3"
+      },
+      "source": [
+        "Опишите, как увеличение числа параметров модели влияет на качество на обучающей и валидационной выборках (без их описания за работу ставится ноль баллов)\n",
+        "\n",
+        "__Ваше подробное описание:__"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "sS9CrmbnmcV3"
+      },
+      "source": [
+        "**Задание 11 (1 балл).** Как вы должны были заметить, более сложная модель стала сильнее переобучаться. Попробуем разные методы регуляризации, чтобы бороться с переобучением. Проведите два эксперимента:\n",
+        "\n",
+        "- Добавьте слой дропаута с параметром $p=0.2$ после каждого линейного слоя, кроме последнего.\n",
+        "- Попробуйте batch-нормализацию вместо дропаута. Строго говоря, batch-нормализация не является методом регуляризации, но никто не запрещает нам экспериментировать с ней."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "hgE_Is-NmcV3"
+      },
+      "outputs": [],
+      "source": [
+        "# your code here (❍ᴥ❍ʋ)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "3yPi6hXJmcV4"
+      },
+      "source": [
+        "Опишите результаты экспериментов (без их описания за работу ставится ноль баллов)\n",
+        "\n",
+        "__Ваше подробное описание:__"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "2VyLOKDxmcV4"
+      },
+      "source": [
+        "**Задание 12 (1 балл).** Теперь, когда мы определились с выбором архитектуры нейронной сети, пора заняться рутиной DL-инженера &mdash; перебором гиперпараметров. Подберите оптимальное значение lr по значению RMSE на валидации (по логарифмической сетке, достаточно посмотреть 3-4 значения). Затем подберите оптимальное значение weight decay для данного lr (тоже по логарифмической сетке, типичные значения этого параметра лежат в диапазоне $[10^{-6}, 10^{-3}]$, но не забудьте включить нулевое значение в сетку). Постройте графики зависимости RMSE на трейне и на валидации от значений параметров. Прокомментируйте получившиеся зависимости."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "nPwa9AijmcV4"
+      },
+      "outputs": [],
+      "source": [
+        "# your code here (｡❤‿❤｡)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "oLojkdBpmcV4"
+      },
+      "source": [
+        "Опишите результаты экспериментов (без их описания за работу ставится ноль баллов)\n",
+        "\n",
+        "__Ваше подробное описание:__"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "W3Ev2kw4mcV4"
+      },
+      "source": [
+        "> Как вы могли заметить, еще одна рутина DL-инженера &mdash; утомительное ожидание обучения моделей.\n",
+        "\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "swmQiJYUmcV4"
+      },
+      "source": [
+        "**Задание 13 (6 баллов).**\n",
+        "\n",
+        "Думаю направление размышлений вы поняли. Постарайтесь с помощью своих экспериментов выбить максимально возможное значение RMSE на тестовой выборке. Соотношение между полученным значением метрики на тестовой выборке и баллами за задание следующее:\n",
+        "\n",
+        "- $\\text{RMSE} \\le 8.90 $ &mdash; 2 балла\n",
+        "- $\\text{RMSE} \\le 8.80 $ &mdash; 4 балла\n",
+        "- $\\text{RMSE} \\le 8.75 $ &mdash; 6 баллов\n",
+        "\n",
+        "**Различные трюки, которые можно попробовать:**\n",
+        "\n",
+        "1. Попробуйте делать во время обучения раннюю остановку обучения и сохранять модель в тот момент, когда качество на валидации начало ухудшаься, то есть модель начала переобучаться\n",
+        "2. Попробуйте усложнить архитектуру нейросет\n",
+        "    - Больше/меньше нейронов\n",
+        "    - Больше/меньше слоёв\n",
+        "    - Другие функции активации (tanh, relu, leaky relu, elu etc)\n",
+        "    - Регуляризация (dropout, l1,l2)\n",
+        "3. Попробуйте другие оптимизаторы, а также смену скорости обучения по расписанию.\n",
+        "\n",
+        "И это далеко не полный список. Обратите внимание, что делать grid_search для больших сеток это довольно времязатратное занятие... Попробовать несколько значений, как мы делали в заданиях выше, адекватно, но делать какой-то огромный перебор будет самоубийством.\n",
+        "\n",
+        "Логгируйте свои эксперименты. За один прогон пробуйте одно изменение. Иначе будет непонятно какие именно изменения улучшили качество, а какие ухудшили."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "7Rxs4IsTmcV4"
+      },
+      "outputs": [],
+      "source": [
+        "# your code here\n",
+        "# ༼ つ ಥ_ಥ ༽つ"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "zoX75xpRmcV4"
+      },
+      "source": [
+        "Опишите результаты экспериментов (без их описания за работу ставится ноль баллов)\n",
+        "\n",
+        "__Ваше подробное описание:__"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Ci3aKSc6mcV4"
+      },
+      "source": [
+        "## Бонус (0.1 балла)\n",
+        "\n",
+        "Прикрепите фотографию того, как вы начали этот сентябрь. Какую самую классную эмоцию вы испытали за прошедший месяц?\n",
+        "\n",
+        "__место для картики и эмоции__\n"
+      ]
+    }
+  ],
+  "metadata": {
+    "accelerator": "GPU",
+    "colab": {
+      "gpuType": "T4",
+      "provenance": []
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "name": "python3"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.10.13"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 0
+}
