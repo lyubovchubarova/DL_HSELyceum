@@ -22,7 +22,7 @@
 | 16 октября | [Регуляризация.](pytorch/lecture2_frameworks.pdf) [И еще один pytorch практикум.](https://colab.research.google.com/drive/1Z9ICtjHecliXTz-TzfkWxMAaba6mg_sp?usp=sharing) | НЕТ ДЗ |
 | 23 октября | [Контрольная.](https://colab.research.google.com/drive/1KhwipTWIWQka5KKmWbzmoZ22SxejRl3y?usp=sharing). [Форма для сдачи](https://forms.gle/uAWqg3hqFzcQPHMG7) | |
 | 30 октября | КАНИКУЛЫ | |
-| 6 ноября | Сверточные нейронные сети. Обработка картинок. [Презентация](computer_vision/lecture3_2023.pdf), [семинар](https://colab.research.google.com/drive/1XWP1BQFcOGwViswa6_YfVxYIzGiH4MiS?usp=sharing) | НЕТ ДЗ |
+| 6 ноября | Сверточные нейронные сети. Обработка картинок. [Презентация](computer_vision/lecture3_2023.pdf), [семинар](https://colab.research.google.com/drive/1XWP1BQFcOGwViswa6_YfVxYIzGiH4MiS?usp=sharing) | [ДЗ5](computer_vision/hw.ipynb), дедлайн **24 ноября 23:59** |
 | 13 ноября | Transfer learning в контексте картинок. Computer vision models' zoo. Библиотека trasformers (ура, больше не pytorch!). Для интересующихся - как дообучать в pytorch. | |
 | 20 ноября | Обработка естественного языка.   | |
 | 27 ноября | NLP models' zoo. | |
