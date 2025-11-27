@@ -24,11 +24,12 @@
 | 30 октября | КАНИКУЛЫ | |
 | 6 ноября | Сверточные нейронные сети. Обработка картинок. [Презентация](computer_vision/lecture3_2023.pdf), [семинар](https://colab.research.google.com/drive/1XWP1BQFcOGwViswa6_YfVxYIzGiH4MiS?usp=sharing) | [ДЗ5](computer_vision/hw.ipynb), дедлайн **24 ноября 23:59** |
 | 13 ноября | [Transfer learning в контексте картинок. Computer vision models' zoo.](transfer_learning_CV/dl_lecture4_2021.pdf) [Библиотека trasformers (ура, больше не pytorch!).](https://colab.research.google.com/drive/1-0EfAnGm73jbJobvyl0yiBiX1ek2kar4?usp=sharing) Для интересующихся - как дообучать в pytorch. | ДЗ6 |
-| 20 ноября | Обработка естественного языка, word representations. [Презентация](nlp_base/nlp1_slides_merged_2025.pdf), [семинар](https://colab.research.google.com/drive/13XCD0qSWbV-9B7kOuxn6olUDmb1ddMQG?usp=sharing) | ДЗ7 - сдать полностью сделанный семинар, дедлайн **30 ноября 23:59** |
-| 27 ноября | NLP models' zoo и немного про атеншн.| |
-| 4 декабря | Еще про дообучение | |
-| 11 декабря | Защита проектов. [Информация по проектам](PROJECT.md) | |
+| 20 ноября | Обработка естественного языка, word representations. [Презентация](nlp_base/nlp1_slides_merged_2025.pdf), [семинар](https://colab.research.google.com/drive/13XCD0qSWbV-9B7kOuxn6olUDmb1ddMQG?usp=sharing) |  |
+| 27 ноября | Обработка естественного языка, word representations. [Презентация](nlp_base/nlp1_slides_merged_2025.pdf), [семинар](https://colab.research.google.com/drive/13XCD0qSWbV-9B7kOuxn6olUDmb1ddMQG?usp=sharing) | ДЗ7 - сдать полностью сделанный семинар, дедлайн **30 ноября 23:59** |
+| 4 декабря | Переписывание квизов. [Информация по проектам](PROJECT.md) | |
+| 11 декабря | - | |
 | 18 декабря | - | |
+| 19 декабря | **ДЕДЛАЙН ДЛЯ СДАЧИ ВСЕХ ДОМАШЕК**. Максимально можно получить половину от ДЗ. | |
 | 25 декабря | - | |
 
 
