@@ -29,7 +29,7 @@
 | 20 ноября | Обработка естественного языка, word representations. [Презентация](nlp_base/nlp1_slides_merged_2025.pdf), [семинар](https://colab.research.google.com/drive/13XCD0qSWbV-9B7kOuxn6olUDmb1ddMQG?usp=sharing) |  |
 | 27 ноября | Обработка естественного языка, word representations. [Презентация](nlp_base/nlp1_slides_merged_2025.pdf), [семинар](https://colab.research.google.com/drive/13XCD0qSWbV-9B7kOuxn6olUDmb1ddMQG?usp=sharing) | ДЗ6 - сдать полностью сделанный семинар, дедлайн **7 декабря 23:59** |
 | 4 декабря | Переписывание квизов. [Информация по проектам](PROJECT.md) | |
-| 11 декабря | [Трансформеры.](llms/08_transformer.pptx.pdf) Зоопарк языковых моделей.(llms/lecture_llm.pdf). Слайды из ШАДа. [Семинар](https://colab.research.google.com/drive/1SeXbIOL8sTzIXKUFJTLILcwtMc_OIR1M?usp=sharing) | |
+| 11 декабря | [Трансформеры.](llms/08_transformer.pptx.pdf) [Зоопарк языковых моделей.](llms/lecture_llm.pdf). Слайды из ШАДа. [Семинар](https://colab.research.google.com/drive/1SeXbIOL8sTzIXKUFJTLILcwtMc_OIR1M?usp=sharing) | |
 | 18 декабря | - | |
 | 19 декабря | **ДЕДЛАЙН ДЛЯ СДАЧИ ВСЕХ ДОМАШЕК**. Максимально можно получить половину от ДЗ. | |
 | 25 декабря | - | |
